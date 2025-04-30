@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Drug;
+use App\Models\Company;
+use App\Models\ActiveIngredient;
+use Illuminate\Http\Request;
+
+class DrugController extends Controller
+{
+    /**
+     * Mostra tutti i farmaci.
+     */
+    public function index()
+    {
+        $drugs = Drug::with(['producer', 'ingredient'])->get();
+        return view('drugs.index', compact('drugs'));
+    }
+
+    /**
+     * Mostra il form per creare un nuovo farmaco.
+     */
+    public function create()
+    {
+        $companies = Company::all();
+        $ingredients = ActiveIngredient::all();
+        return view('drugs.create', compact('companies', 'ingredients'));
+    }
+
+    /**
+     * Salva un nuovo farmaco nel database.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'minsan_code' => 'required|string|unique:drugs',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'expiration_date' => 'nullable|date',
+            'price' => 'required|numeric|min:0',
+            'company_id' => 'required|exists:companies,id',
+            'active_ingredient_id' => 'required|exists:active_ingredients,id',
+        ]);
+
+        Drug::create($validated);
+
+        return redirect()->route('drugs.index')->with('success', 'Farmaco creato con successo.');
+    }
+
+    /**
+     * Mostra i dettagli di un singolo farmaco.
+     */
+    public function show($id)
+    {
+        $drug = Drug::with(['producer', 'ingredient'])->findOrFail($id);
+        return view('drugs.show', compact('drug'));
+    }
+
+    /**
+     * Mostra il form per modificare un farmaco.
+     */
+    public function edit($id)
+    {
+        $drug = Drug::findOrFail($id);
+        $companies = Company::all();
+        $ingredients = ActiveIngredient::all();
+        return view('drugs.edit', compact('drug', 'companies', 'ingredients'));
+    }
+
+    /**
+     * Salva le modifiche al farmaco.
+     */
+    public function update(Request $request, $id)
+    {
+        $drug = Drug::findOrFail($id);
+
+        $validated = $request->validate([
+            'minsan_code' => 'required|string|unique:drugs,minsan_code,' . $drug->id,
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'expiration_date' => 'nullable|date',
+            'price' => 'required|numeric|min:0',
+            'company_id' => 'required|exists:companies,id',
+            'active_ingredient_id' => 'required|exists:active_ingredients,id',
+        ]);
+
+        $drug->update($validated);
+
+        return redirect()->route('drugs.index')->with('success', 'Farmaco aggiornato con successo.');
+    }
+
+    /**
+     * Elimina un farmaco.
+     */
+    public function destroy($id)
+    {
+        $drug = Drug::findOrFail($id);
+        $drug->delete();
+
+        return redirect()->route('drugs.index')->with('success', 'Farmaco eliminato.');
+    }
+}
